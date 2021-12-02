@@ -2,26 +2,26 @@ const fs = require('fs/promises')
 const path = require('path')
 const CreateError = require('http-errors')
 
-const { Contact } = require('../../model')
+const { User } = require('../../model')
+const Jimp = require('jimp')
 
 const contactsDir = path.join(__dirname, '../../public/avatar')
 
 const updateAvatars = async (req, res, next) => {
-  const { contactId } = req.params
+  const { _id } = req.user
+  const file = await Jimp.read(req.file.path)
+  await file.resize(250, 250).write(req.file.path)
   const { path: tempUpload, originalname } = req.file
-  const fileName = `${contactId}_${originalname}`
+  console.log(req.file)
   try {
-    const resultUpload = path.join(contactsDir, contactId, fileName)
+    const fileName = `${_id}_${originalname}`
+    const resultUpload = path.join(contactsDir, fileName)
     await fs.rename(tempUpload, resultUpload)
-    const avatar = path.join('/contacts', contactId, fileName)
+    const avatar = path.join('/avatars', fileName)
 
-    const result = await Contact.findByIdAndUpdate(
-      contactId,
-      { avatar },
-      { new: true }
-    )
+    const result = await User.findByIdAndUpdate(_id, { avatar }, { new: true })
     if (!result) {
-      throw new CreateError(404, `Contact with id-'${contactId}' not found`)
+      throw new CreateError(404, `Contact with id-'${_id}' not found`)
     }
     res.json({
       status: 'success',
